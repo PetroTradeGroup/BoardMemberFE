@@ -1,0 +1,165 @@
+.page {
+  min-height: 100svh;
+  padding: var(--space-5);
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.pageTitle {
+  width: 100%;
+  max-width: 640px;
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--text-headline-size);
+  font-weight: var(--text-headline-weight);
+  line-height: var(--text-headline-line-height);
+  color: var(--color-text-primary);
+}
+
+.card {
+  width: 100%;
+  max-width: 640px;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+}
+
+.emptyState {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--text-body-size);
+  color: var(--color-text-secondary);
+}
+
+/* components.approval-row from DESIGN.md: title / meta / right-aligned badge, border divider
+   between rows, no divider after the last row in the group. */
+.row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rowLast {
+  border-bottom: none;
+}
+
+.rowHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.rowTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.rowTitle {
+  font-family: var(--font-family-base);
+  font-size: var(--text-body-size);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  font-family: var(--font-family-base);
+  font-size: var(--text-caption-size);
+  color: var(--color-text-secondary);
+}
+
+.detail {
+  padding: 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detailMeta {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-family-base);
+  font-size: var(--text-body-dense-size);
+  color: var(--color-text-primary);
+}
+
+.detailMeta p {
+  margin: 0;
+}
+
+.detailMeta p + p {
+  margin-top: var(--space-1);
+}
+
+.sodNotice {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--text-body-size);
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.error {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--text-caption-size);
+  color: var(--color-rejected-text);
+}
+
+/* Shadow reserved exclusively for transient overlays that must visually interrupt
+   (DESIGN.md Elevation & Depth) -- the reject-reason confirmation dialog is exactly that case. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 40%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  z-index: 10;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dialogTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--text-headline-size);
+  font-weight: var(--text-headline-weight);
+  color: var(--color-text-primary);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
