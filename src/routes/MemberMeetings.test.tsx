@@ -33,7 +33,7 @@ describe('MemberMeetings', () => {
 
     renderComponent()
 
-    expect(await screen.findByText('No meetings yet.')).toBeInTheDocument()
+    expect(await screen.findByText(/^No meetings yet\./)).toBeInTheDocument()
   })
 
   it('lists visible meetings with an Approved badge and links to the detail screen', async () => {

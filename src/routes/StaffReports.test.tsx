@@ -56,7 +56,7 @@ describe('StaffReports', () => {
     await user.click(screen.getByRole('button', { name: 'Run report' }))
 
     expect(await screen.findByText('Q3 Board Meeting')).toBeInTheDocument()
-    expect(screen.getByText(/Physical: 2/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Physical: 2')).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/reports/attendance')).toBeDefined()
   })
@@ -68,7 +68,7 @@ describe('StaffReports', () => {
 
     render(<StaffReports />)
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Governance' }))
+    await user.click(screen.getByRole('tab', { name: 'Governance' }))
     await user.click(screen.getByRole('button', { name: 'Run report' }))
 
     expect(await screen.findByText('Conflicts of Interest')).toBeInTheDocument()

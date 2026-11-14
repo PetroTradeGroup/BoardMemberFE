@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import styles from './Callback.module.css'
 
 /**
  * `redirect_uri` target. `react-oidc-context`'s `AuthProvider` performs the
@@ -24,13 +23,26 @@ export function Callback() {
     }
   }, [auth.isAuthenticated, auth.user, navigate])
 
+  // A silent (`prompt=none`) session-restore attempt from SignIn found no live Keycloak session:
+  // not a real failure, just show the normal sign-in screen.
+  const silentRestoreFailed = auth.error?.message === 'login_required'
+  useEffect(() => {
+    if (silentRestoreFailed) {
+      navigate('/', { replace: true })
+    }
+  }, [silentRestoreFailed, navigate])
+
+  if (silentRestoreFailed) {
+    return null
+  }
+
   if (auth.error) {
     return (
-      <main className={styles.page}>
-        <p className={styles.error} role="alert">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+        <p className="text-sm text-destructive" role="alert">
           Sign-in failed: {auth.error.message}
         </p>
-        <Link className={styles.link} to="/">
+        <Link className="text-sm font-medium text-primary underline-offset-4 hover:underline" to="/">
           Return to sign in
         </Link>
       </main>
@@ -39,8 +51,8 @@ export function Callback() {
 
   if (auth.isLoading) {
     return (
-      <main className={styles.page}>
-        <p className={styles.message}>Signing you in…</p>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">Signing you in…</p>
       </main>
     )
   }
@@ -51,9 +63,9 @@ export function Callback() {
   // spinner with no way back.
   if (!auth.isAuthenticated) {
     return (
-      <main className={styles.page}>
-        <p className={styles.message}>Sign-in didn't complete.</p>
-        <Link className={styles.link} to="/">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">Sign-in didn't complete.</p>
+        <Link className="text-sm font-medium text-primary underline-offset-4 hover:underline" to="/">
           Return to sign in
         </Link>
       </main>
@@ -61,8 +73,8 @@ export function Callback() {
   }
 
   return (
-    <main className={styles.page}>
-      <p className={styles.message}>Signing you in…</p>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">Signing you in…</p>
     </main>
   )
 }

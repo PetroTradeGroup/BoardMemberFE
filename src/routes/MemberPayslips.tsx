@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Card } from '../components/Card/Card'
-import { Button } from '../components/Button/Button'
+import { Button } from '@/components/ui/button'
 import { usePagination } from '../components/Pagination/usePagination'
 import { PaginationControls } from '../components/Pagination/PaginationControls'
 import { downloadPayslipPdf, getPayslip, listPayslips, type PayslipResponse } from '../api/payslipsApi'
-import styles from './MemberPayslips.module.css'
+import { Download, Eye, Receipt } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState, FormMessage, Page, PageHeader } from '../components/Page/Page'
 
 /**
  * Story 7.2: a Member's own payslips, including historical ones -- server-side ownership
@@ -20,6 +22,7 @@ export function MemberPayslips() {
   const [loadError, setLoadError] = useState<string>()
   const [actionError, setActionError] = useState<{ id: string; message: string }>()
   const [busyId, setBusyId] = useState<string>()
+  const [openPayslip, setOpenPayslip] = useState<PayslipResponse>()
 
   useEffect(() => {
     if (!accessToken) {
@@ -38,10 +41,14 @@ export function MemberPayslips() {
     if (!accessToken || busyId) {
       return
     }
+    if (openPayslip?.id === id) {
+      setOpenPayslip(undefined)
+      return
+    }
     setActionError(undefined)
     setBusyId(id)
     try {
-      await getPayslip(accessToken, id)
+      setOpenPayslip(await getPayslip(accessToken, id))
       markViewed(id)
     }
     catch (error: unknown) {
@@ -73,45 +80,76 @@ export function MemberPayslips() {
   const pagination = usePagination(payslips ?? [], 10)
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Payslips</h1>
+    <Page>
+      <PageHeader title="Payslips" description="Your sitting-fee payslips, newest first. Only you can see these." />
 
-      {loadError ? (
-        <p className={styles.error} role="alert">
-          {loadError}
-        </p>
-      ) : null}
+      {loadError ? <FormMessage error={loadError} /> : null}
 
-      <Card className={styles.card}>
-        {payslips && payslips.length === 0 ? <p className={styles.emptyState}>No payslips yet.</p> : null}
+      <Card className="overflow-hidden">
+        {payslips && payslips.length === 0 ? <EmptyState icon={<Receipt />}>No payslips yet.</EmptyState> : null}
 
-        {pagination.pageItems.map((payslip, index) => (
-          <div key={payslip.id} className={`${styles.row} ${index === pagination.pageItems.length - 1 ? styles.rowLast : ''}`}>
-            <div className={styles.rowTitleBlock}>
-              <span className={styles.rowTitle}>{payslip.meetingTitle}</span>
-              <span className={styles.rowMeta}>
-                {payslip.committee} &middot; {payslip.position} &middot; {new Date(payslip.generatedAt).toLocaleDateString()}
-              </span>
-              {payslip.viewed ? <span className={styles.viewedMark}>Viewed</span> : null}
-            </div>
-            <span className={styles.netAmount}>{payslip.netAmount.toFixed(2)}</span>
-            <div className={styles.actions}>
-              <Button variant="secondary" onClick={() => handleView(payslip.id)} disabled={busyId === payslip.id}>
-                View
-              </Button>
-              <Button onClick={() => handleDownload(payslip.id)} disabled={busyId === payslip.id}>
-                Download
-              </Button>
-            </div>
-            {actionError?.id === payslip.id ? (
-              <p className={styles.error} role="alert">
-                {actionError.message}
-              </p>
-            ) : null}
-          </div>
-        ))}
+        <ul className="divide-y">
+          {pagination.pageItems.map((payslip) => (
+            <li key={payslip.id} className="px-5 py-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
+                  <Receipt className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{payslip.meetingTitle}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {payslip.committee} &middot; {POSITION_LABELS[payslip.position] ?? payslip.position} &middot; {new Date(payslip.generatedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {payslip.viewed ? (
+                  <Badge variant="secondary" className="gap-1 text-muted-foreground">
+                    <Eye className="size-3" aria-hidden />
+                    Viewed
+                  </Badge>
+                ) : null}
+                <span className="font-mono text-lg font-semibold">{payslip.netAmount.toFixed(2)}</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleView(payslip.id)}
+                    disabled={busyId === payslip.id}
+                    aria-expanded={openPayslip?.id === payslip.id}
+                  >
+                    {openPayslip?.id === payslip.id ? 'Hide' : 'View'}
+                  </Button>
+                  <Button onClick={() => handleDownload(payslip.id)} disabled={busyId === payslip.id}>
+                    <Download /> Download
+                  </Button>
+                </div>
+              </div>
+              {openPayslip?.id === payslip.id ? (
+                <dl className="mt-4 grid max-w-md grid-cols-2 gap-x-6 gap-y-1.5 rounded-lg border bg-muted/40 p-4 text-sm sm:ml-14">
+                  <dt className="text-muted-foreground">Position</dt>
+                  <dd className="text-right">{POSITION_LABELS[openPayslip.position] ?? openPayslip.position}</dd>
+                  <dt className="text-muted-foreground">Gross</dt>
+                  <dd className="text-right font-mono">{openPayslip.grossAmount.toFixed(2)}</dd>
+                  <dt className="text-muted-foreground">Deductions</dt>
+                  <dd className="text-right font-mono">{openPayslip.deductionsAmount.toFixed(2)}</dd>
+                  <dt className="border-t pt-1.5 font-medium">Net</dt>
+                  <dd className="border-t pt-1.5 text-right font-mono font-semibold">{openPayslip.netAmount.toFixed(2)}</dd>
+                </dl>
+              ) : null}
+              {actionError?.id === payslip.id ? (
+                <p className="mt-2 text-sm text-destructive" role="alert">
+                  {actionError.message}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
         <PaginationControls {...pagination} />
       </Card>
-    </main>
+    </Page>
   )
+}
+
+const POSITION_LABELS: Record<string, string> = {
+  CHAIRPERSON: 'Chairperson',
+  VICE_CHAIRPERSON: 'Vice-Chairperson',
+  MEMBER: 'Member',
 }

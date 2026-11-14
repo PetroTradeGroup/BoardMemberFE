@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { PendingApprovals } from './PendingApprovals'
@@ -14,16 +14,12 @@ function mockAuth(sub = 'checker-1') {
 }
 
 /** URL-substring-routed fetch mock -- resilient to the exact number/order of requests a render
- * fires (e.g. the user-directory lookup runs alongside the pending-approvals fetch). Any route not
- * listed here defaults to an empty user directory, since no test in this file asserts on a
- * resolved display name (they assert the raw id fallback, which is what an empty directory
- * produces anyway). */
+ * fires (e.g. the user-directory lookup runs alongside the pending-approvals fetch). The user
+ * directory is deliberately left unmocked (fails), since tests here assert the raw id fallback
+ * a failed lookup produces. */
 function mockFetch(routes: Record<string, unknown>) {
   const fetchMock = fetch as ReturnType<typeof vi.fn>
-  const allRoutes: Record<string, unknown> = {
-    '/api/v1/users': { items: [], page: 1, pageSize: 0, totalItems: 0 },
-    ...routes,
-  }
+  const allRoutes: Record<string, unknown> = routes
   fetchMock.mockImplementation(async (url: string) => {
     for (const [substring, body] of Object.entries(allRoutes)) {
       if (url.includes(substring)) {
@@ -130,9 +126,11 @@ describe('PendingApprovals', () => {
     const user = userEvent.setup()
 
     expect(await screen.findByText(/submitted by lo-user-1/)).toBeInTheDocument()
+    // Details are prefetched, so the collapsed row already shows the readable title.
+    expect(await screen.findByText('Q3 Board Meeting')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
     await user.click(screen.getByText(/submitted by lo-user-1/))
 
-    expect(await screen.findByText('Q3 Board Meeting')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
   })
@@ -184,7 +182,7 @@ describe('PendingApprovals', () => {
     await user.click(await screen.findByText(/submitted by lo-user-1/))
     await user.click(await screen.findByRole('button', { name: 'Reject' }))
 
-    const rejectButtonInDialog = screen.getAllByRole('button', { name: 'Reject' })[1]
+    const rejectButtonInDialog = within(screen.getByRole('dialog')).getByRole('button', { name: 'Reject' })
     expect(rejectButtonInDialog).toBeDisabled()
 
     await user.type(screen.getByLabelText('Reason'), 'Missing chairperson')
@@ -212,8 +210,9 @@ describe('PendingApprovals', () => {
     await user.click(screen.getByText(/submitted by admin-1/))
 
     expect(await screen.findByText('Assign to Finance Committee')).toBeInTheDocument()
-    expect(await screen.findByText('Member: member-1')).toBeInTheDocument()
-    expect(screen.getByText('Action: Assign')).toBeInTheDocument()
+    // Details render as label/value pairs (dt/dd) now, not "Label: value" strings.
+    expect(await screen.findByText('member-1')).toBeInTheDocument()
+    expect(screen.getByText('Assign')).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/committee-memberships/change-1')).toBeDefined()
   })
@@ -231,8 +230,8 @@ describe('PendingApprovals', () => {
     await user.click(screen.getByText(/submitted by lo-user-1/))
 
     expect(await screen.findByText('Attendance Register: Q3 Board Meeting')).toBeInTheDocument()
-    expect(await screen.findByText(/member-1: Physical/)).toBeInTheDocument()
-    expect(screen.getByText(/member-2: Apologized \(Apology: Travelling\)/)).toBeInTheDocument()
+    expect(await screen.findByRole('row', { name: /member-1 Physical/ })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /member-2 Apologized Apology: Travelling/ })).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/attendance-registers/register-1')).toBeDefined()
   })
@@ -258,7 +257,7 @@ describe('PendingApprovals', () => {
     await user.click(screen.getByText(/submitted by admin-1/))
 
     expect(await screen.findByText('Rate: Chairperson — Main Board')).toBeInTheDocument()
-    expect(screen.getByText('Rate: 350.00')).toBeInTheDocument()
+    expect(screen.getByText('350.00')).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/rate-table/rate-change-1')).toBeDefined()
   })
@@ -289,8 +288,8 @@ describe('PendingApprovals', () => {
     await user.click(screen.getByText(/submitted by lo-1/))
 
     expect(await screen.findByText('Payment Schedule: Q3 Board Meeting')).toBeInTheDocument()
-    expect(screen.getByText(/chair-1: Chairperson/)).toBeInTheDocument()
-    expect(screen.getByText('Total net: 297.50')).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /chair-1 Chairperson 297.50/ })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Total net 297.50/ })).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/payment-schedules/schedule-1')).toBeDefined()
   })
@@ -316,7 +315,7 @@ describe('PendingApprovals', () => {
     await user.click(screen.getByText(/submitted by lo-1/))
 
     expect(await screen.findByText('Authorized Exception: member-4')).toBeInTheDocument()
-    expect(screen.getByText('Reason: Late-recorded attendance')).toBeInTheDocument()
+    expect(screen.getByText('Late-recorded attendance')).toBeInTheDocument()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
     expect(findCall(fetchMock, '/api/v1/authorized-exceptions/exception-1')).toBeDefined()
   })

@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react'
-import styles from './Button.module.css'
+import { Button as UiButton } from '@/components/ui/button'
 
 export type ButtonVariant = 'primary' | 'secondary'
 
@@ -8,12 +8,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * `components.button-primary` / `components.button-secondary` from
- * DESIGN.md. Exactly two variants — no destructive/red style.
+ * App-level button on top of shadcn's Button: `primary` = solid brand teal, `secondary` =
+ * outline. Exactly two variants, no destructive/red style (DESIGN.md).
  */
-export function Button({ variant = 'primary', className, type = 'button', ...rest }: ButtonProps) {
-  const variantClassName = variant === 'primary' ? styles.primary : styles.secondary
-  const combinedClassName = [styles.button, variantClassName, className].filter(Boolean).join(' ')
-
-  return <button type={type} className={combinedClassName} {...rest} />
+export function Button({ variant = 'primary', type = 'button', ...rest }: ButtonProps) {
+  return <UiButton type={type} variant={variant === 'primary' ? 'default' : 'outline'} data-app-variant={variant} {...rest} />
 }

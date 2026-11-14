@@ -2,23 +2,18 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Button } from './Button'
-import styles from './Button.module.css'
 
 describe('Button', () => {
   it('renders the primary variant by default', () => {
     render(<Button>Sign in</Button>)
 
-    const button = screen.getByRole('button', { name: 'Sign in' })
-    expect(button.className).toContain(styles.primary)
-    expect(button.className).not.toContain(styles.secondary)
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveAttribute('data-app-variant', 'primary')
   })
 
   it('renders the secondary variant when requested', () => {
     render(<Button variant="secondary">Sign out</Button>)
 
-    const button = screen.getByRole('button', { name: 'Sign out' })
-    expect(button.className).toContain(styles.secondary)
-    expect(button.className).not.toContain(styles.primary)
+    expect(screen.getByRole('button', { name: 'Sign out' })).toHaveAttribute('data-app-variant', 'secondary')
   })
 
   it('calls onClick when clicked', async () => {

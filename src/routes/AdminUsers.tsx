@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { Card } from '../components/Card/Card'
 import { Button } from '../components/Button/Button'
 import { FormField } from '../components/FormField/FormField'
 import { SelectField } from '../components/FormField/SelectField'
 import { usePagination } from '../components/Pagination/usePagination'
 import { PaginationControls } from '../components/Pagination/PaginationControls'
 import { ApiError, createUser, listUsers, type UserRole, type UserSummary } from '../api/usersApi'
-import styles from './AdminUsers.module.css'
+import { UserPlus } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { FormMessage, Page, PageHeader, PersonCell, Section } from '../components/Page/Page'
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'BOARD_MEMBER', label: 'Board Member' },
@@ -97,69 +98,67 @@ export function AdminUsers() {
   const userPagination = usePagination(users ?? [], 10)
 
   return (
-    <main className={styles.page}>
-      <Card className={styles.card}>
-        <h1 className={styles.heading}>Create user account</h1>
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <FormField
-            label="First name"
-            value={firstName}
-            onChange={(event) => setFirstName(event.target.value)}
-            error={fieldErrors.firstName}
-            required
-          />
-          <FormField
-            label="Last name"
-            value={lastName}
-            onChange={(event) => setLastName(event.target.value)}
-            error={fieldErrors.lastName}
-            required
-          />
-          <FormField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            error={fieldErrors.email}
-            required
-          />
-          <SelectField
-            label="Role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-            options={ROLE_OPTIONS}
-          />
-          <Button type="submit" disabled={isSubmitting}>
-            Create account
-          </Button>
-          {formError ? (
-            <p className={styles.error} role="alert">
-              {formError}
-            </p>
-          ) : null}
-          {successMessage ? <p className={styles.success}>{successMessage}</p> : null}
-        </form>
-      </Card>
+    <Page>
+      <PageHeader title="Users" description="Create accounts for board members, committee members and staff. New users set their own password on first sign-in." />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
+        <Section title="Create user account">
+          <form className="flex flex-col gap-4 p-5" onSubmit={handleSubmit}>
+            <FormField
+              label="First name"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              error={fieldErrors.firstName}
+              required
+            />
+            <FormField
+              label="Last name"
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              error={fieldErrors.lastName}
+              required
+            />
+            <FormField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              error={fieldErrors.email}
+              required
+            />
+            <SelectField
+              label="Role"
+              value={role}
+              onChange={(event) => setRole(event.target.value as UserRole)}
+              options={ROLE_OPTIONS}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              <UserPlus /> Create account
+            </Button>
+            <FormMessage error={formError} success={successMessage} />
+          </form>
+        </Section>
 
-      <Card className={styles.card}>
-        <h1 className={styles.heading}>Users</h1>
-        {listError ? (
-          <p className={styles.error} role="alert">
-            {listError}
-          </p>
-        ) : null}
-        <ul className={styles.list}>
-          {userPagination.pageItems.map((summary) => (
-            <li key={summary.id} className={styles.listItem}>
-              <span>
-                {summary.firstName} {summary.lastName}
-              </span>
-              <span>{summary.email}</span>
-            </li>
-          ))}
-        </ul>
-        <PaginationControls {...userPagination} />
-      </Card>
-    </main>
+        <Section title="All users" actions={<span className="font-mono text-xs text-muted-foreground">{users?.length ?? 0}</span>}>
+          {listError ? <div className="p-5"><FormMessage error={listError} /></div> : null}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {userPagination.pageItems.map((summary) => (
+                <TableRow key={summary.id}>
+                  <TableCell><PersonCell firstName={summary.firstName} lastName={summary.lastName} /></TableCell>
+                  <TableCell className="text-muted-foreground">{summary.email}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <PaginationControls {...userPagination} />
+        </Section>
+      </div>
+    </Page>
   )
 }

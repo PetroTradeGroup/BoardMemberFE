@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Card } from '../components/Card/Card'
-import { Button } from '../components/Button/Button'
+import { ArrowLeft, Calculator, Loader2, RefreshCw, Send, UserX } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState, Kpi, Page, PageHeader, Section } from '../components/Page/Page'
 import { TextAreaField } from '../components/FormField/TextAreaField'
 import { DraftLabel, StatusBadge } from '../components/StatusBadge/StatusBadge'
 import { accessTokenHasRole } from '../auth/accessTokenRoles'
@@ -15,13 +20,18 @@ import {
   submitSchedule,
   type PaymentScheduleResponse,
 } from '../api/paymentsApi'
-import styles from './StaffPaymentSchedule.module.css'
 
 const ATTENDANCE_LABELS: Record<string, string> = {
   PHYSICAL: 'Physical',
   VIRTUAL: 'Virtual',
   APOLOGIZED: 'Apologized — included via approved exception',
   NO_RESPONSE: 'No response',
+}
+
+const POSITION_LABELS: Record<string, string> = {
+  CHAIRPERSON: 'Chairperson',
+  VICE_CHAIRPERSON: 'Vice-Chairperson',
+  MEMBER: 'Member',
 }
 
 const EXCLUDED_REASON_LABELS: Record<string, string> = {
@@ -153,25 +163,40 @@ export function StaffPaymentSchedule() {
   const canEdit = schedule && (schedule.status === 'DRAFT' || schedule.status === 'REJECTED')
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Payment Schedule</h1>
+    <Page>
+      <PageHeader
+        title="Payment Schedule"
+        description={schedule ? `${schedule.committee} — ${schedule.meetingTitle}` : 'Sitting fees derived from the approved attendance register'}
+        actions={
+          meetingId ? (
+            <Button variant="secondary" asChild>
+              <Link to={`/staff/meetings/${meetingId}/register`}>
+                <ArrowLeft /> Attendance register
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
 
       {loadError ? (
-        <p className={styles.error} role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {loadError}
         </p>
       ) : null}
 
       {notYetGenerated ? (
-        <Card className={styles.card}>
-          <p className={styles.caption}>No payment schedule has been generated yet for this meeting.</p>
+        <Card>
+          <EmptyState icon={<Calculator />}>No payment schedule has been generated yet for this meeting.</EmptyState>
           {isLegalOfficer ? (
-            <Button onClick={handleGenerate} disabled={isGenerating}>
-              Generate Payment Schedule
-            </Button>
+            <div className="flex justify-center pb-8">
+              <Button onClick={handleGenerate} disabled={isGenerating}>
+                {isGenerating ? <Loader2 className="animate-spin" /> : <Calculator />}
+                Generate Payment Schedule
+              </Button>
+            </div>
           ) : null}
           {generateError ? (
-            <p className={styles.error} role="alert">
+            <p className="px-6 pb-6 text-center text-sm text-destructive" role="alert">
               {generateError}
             </p>
           ) : null}
@@ -179,131 +204,159 @@ export function StaffPaymentSchedule() {
       ) : null}
 
       {schedule ? (
-        <Card className={styles.card}>
-          <div className={styles.topbar}>
-            <p className={styles.cardTitle}>
-              {schedule.committee} — {schedule.meetingTitle}
-            </p>
+        <>
+          <div className="flex flex-wrap items-center gap-3">
             {schedule.status === 'DRAFT' ? <DraftLabel /> : <StatusBadge status={statusToBadge(schedule.status)} />}
+            <span className="text-sm text-muted-foreground">
+              {schedule.lineItems.length} member{schedule.lineItems.length === 1 ? '' : 's'} paid
+              {schedule.excludedMembers.length > 0 ? ` · ${schedule.excludedMembers.length} not included` : ''}
+            </span>
           </div>
-          {schedule.rejectionReason ? <p className={styles.rejectionReason}>Reason: {schedule.rejectionReason}</p> : null}
 
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Member</th>
-                  <th>Position</th>
-                  <th>Attendance</th>
-                  <th className={styles.num}>Rate Applied</th>
-                  <th className={styles.num}>Gross</th>
-                  <th className={styles.num}>Deductions</th>
-                  <th className={styles.num}>Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedule.lineItems.map((item) => (
-                  <tr key={item.memberUserId}>
-                    <td>{displayName(item.memberUserId)}</td>
-                    <td>{item.position}</td>
-                    <td>{ATTENDANCE_LABELS[item.attendanceStatus] ?? item.attendanceStatus}</td>
-                    <td className={styles.num}>{item.rateApplied.toFixed(2)}</td>
-                    <td className={styles.num}>{item.grossAmount.toFixed(2)}</td>
-                    <td className={styles.num}>{item.deductionsAmount.toFixed(2)}</td>
-                    <td className={styles.num}>{item.netAmount.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={4}>Totals</td>
-                  <td className={styles.num}>{schedule.totalGross.toFixed(2)}</td>
-                  <td className={styles.num}>{schedule.totalDeductions.toFixed(2)}</td>
-                  <td className={styles.num}>{schedule.totalNet.toFixed(2)}</td>
-                </tr>
-              </tfoot>
-            </table>
+          {schedule.rejectionReason ? (
+            <p className="rounded-md border border-[var(--rejected-border)] bg-[var(--rejected-bg)] px-3 py-2 text-sm text-[var(--rejected-fg)]">
+              Rejected — {schedule.rejectionReason}
+            </p>
+          ) : null}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Kpi label="Gross" value={schedule.totalGross.toFixed(2)} />
+            <Kpi label="Deductions" value={schedule.totalDeductions.toFixed(2)} />
+            <Kpi label="Net payable" value={schedule.totalNet.toFixed(2)} tone="success" />
           </div>
+
+          <Section title="Payment lines" description="Rates come from the approved Rate Table; deductions are withholding tax">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Attendance</TableHead>
+                  <TableHead className="text-right">Rate applied</TableHead>
+                  <TableHead className="text-right">Gross</TableHead>
+                  <TableHead className="text-right">Deductions</TableHead>
+                  <TableHead className="text-right">Net</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {schedule.lineItems.map((item) => (
+                  <TableRow key={item.memberUserId}>
+                    <TableCell className="font-medium">{displayName(item.memberUserId)}</TableCell>
+                    <TableCell>{POSITION_LABELS[item.position] ?? item.position}</TableCell>
+                    <TableCell className="whitespace-normal text-muted-foreground">{ATTENDANCE_LABELS[item.attendanceStatus] ?? item.attendanceStatus}</TableCell>
+                    <TableCell className="text-right font-mono">{item.rateApplied.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono">{item.grossAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground">{item.deductionsAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold">{item.netAmount.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+                {schedule.lineItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No members qualify for payment.</TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4}>Totals</TableCell>
+                  <TableCell className="text-right font-mono">{schedule.totalGross.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-mono">{schedule.totalDeductions.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-mono">{schedule.totalNet.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </Section>
 
           {schedule.excludedMembers.length > 0 ? (
-            <div className={styles.excludedSection}>
-              <p className={styles.excludedTitle}>Not included in this schedule</p>
-              {schedule.excludedMembers.map((excluded) => {
-                const exceptionStatus = requestedExceptions[excluded.memberUserId] ?? excluded.exceptionStatus
-                return (
-                  <div key={excluded.memberUserId} className={styles.excludedRow}>
-                    <span>
-                      {displayName(excluded.memberUserId)} &middot; {excluded.position}
-                      <span className={styles.excludedNote}> — Not included &middot; {EXCLUDED_REASON_LABELS[excluded.reason]}</span>
-                    </span>
-                    {isLegalOfficer && canEdit ? (
-                      exceptionStatus ? (
-                        <span className={styles.caption}>{EXCEPTION_STATUS_LABELS[exceptionStatus] ?? exceptionStatus}</span>
-                      ) : exceptionMemberId === excluded.memberUserId ? null : (
-                        <Button variant="secondary" onClick={() => openExceptionForm(excluded.memberUserId)}>
-                          Request Authorized Exception
-                        </Button>
-                      )
-                    ) : null}
-                  </div>
-                )
-              })}
-              {exceptionMemberId ? (
-                <div className={styles.exceptionForm}>
-                  <TextAreaField
-                    label="Reason for exception"
-                    value={exceptionReason}
-                    onChange={(event) => setExceptionReason(event.target.value)}
-                    rows={2}
-                    autoFocus
-                  />
-                  <div className={styles.exceptionActions}>
-                    <Button variant="secondary" onClick={() => setExceptionMemberId(undefined)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleRequestException} disabled={isRequestingException || exceptionReason.trim() === ''}>
-                      Request exception
-                    </Button>
-                  </div>
-                  {exceptionError ? (
-                    <p className={styles.error} role="alert">
-                      {exceptionError}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+            <Section title="Not included in this schedule" description="Absent or apologised members are excluded unless an Authorized Exception is approved">
+              <ul className="divide-y">
+                {schedule.excludedMembers.map((excluded) => {
+                  const exceptionStatus = requestedExceptions[excluded.memberUserId] ?? excluded.exceptionStatus
+                  return (
+                    <li key={excluded.memberUserId} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                      <UserX className="size-4 text-muted-foreground" aria-hidden />
+                      <span className="min-w-0 flex-1 text-sm">
+                        <span className="font-medium">{displayName(excluded.memberUserId)}</span>
+                        <span className="text-muted-foreground"> · {POSITION_LABELS[excluded.position] ?? excluded.position} · {EXCLUDED_REASON_LABELS[excluded.reason] ?? excluded.reason}</span>
+                      </span>
+                      {isLegalOfficer && canEdit ? (
+                        exceptionStatus ? (
+                          <Badge variant="outline">{EXCEPTION_STATUS_LABELS[exceptionStatus] ?? exceptionStatus}</Badge>
+                        ) : (
+                          <Button variant="secondary" size="sm" onClick={() => openExceptionForm(excluded.memberUserId)}>
+                            Request Authorized Exception
+                          </Button>
+                        )
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            </Section>
           ) : null}
 
           {isLegalOfficer ? (
             canEdit ? (
-              <div className={styles.actions}>
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="secondary" onClick={handleGenerate} disabled={isGenerating}>
+                  <RefreshCw className={isGenerating ? 'animate-spin' : undefined} />
                   {isGenerating ? 'Regenerating…' : 'Save as Draft'}
                 </Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  Submit for Approval
+                  <Send /> Submit for Approval
                 </Button>
               </div>
             ) : (
-              <p className={styles.caption}>
+              <p className="text-right text-sm text-muted-foreground">
                 {schedule.status === 'PENDING_APPROVAL' ? 'Awaiting Checker decision.' : 'Schedule is Approved.'}
               </p>
             )
           ) : null}
           {generateError ? (
-            <p className={styles.error} role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {generateError}
             </p>
           ) : null}
           {submitError ? (
-            <p className={styles.error} role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {submitError}
             </p>
           ) : null}
-        </Card>
+        </>
       ) : null}
-    </main>
+
+      <Dialog open={exceptionMemberId !== undefined} onOpenChange={(open) => (open ? undefined : setExceptionMemberId(undefined))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Authorized Exception</DialogTitle>
+            <DialogDescription>
+              {exceptionMemberId ? `Include ${displayName(exceptionMemberId)} in this schedule despite their attendance status. ` : ''}
+              Goes to the Checker for approval.
+            </DialogDescription>
+          </DialogHeader>
+          <TextAreaField
+            label="Reason for exception"
+            value={exceptionReason}
+            onChange={(event) => setExceptionReason(event.target.value)}
+            rows={3}
+            autoFocus
+          />
+          {exceptionError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {exceptionError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setExceptionMemberId(undefined)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRequestException} disabled={isRequestingException || exceptionReason.trim() === ''}>
+              Request exception
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Page>
   )
 }
 

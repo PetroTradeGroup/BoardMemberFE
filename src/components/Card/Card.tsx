@@ -1,18 +1,9 @@
 import type { HTMLAttributes } from 'react'
-import styles from './Card.module.css'
+import { cn } from '@/lib/utils'
 
 export type CardProps = HTMLAttributes<HTMLDivElement>
 
-/**
- * `components.card` from DESIGN.md: surface background, border, `rounded.lg`
- * corners, no shadow.
- */
-export function Card({ className, children, ...rest }: CardProps) {
-  const combinedClassName = className ? `${styles.card} ${className}` : styles.card
-
-  return (
-    <div className={combinedClassName} {...rest}>
-      {children}
-    </div>
-  )
+/** Surface container (shadcn card styling). Padding/layout stay with each screen. */
+export function Card({ className, ...rest }: CardProps) {
+  return <div className={cn('rounded-xl border bg-card text-card-foreground shadow-sm', className)} {...rest} />
 }

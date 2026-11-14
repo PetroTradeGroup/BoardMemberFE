@@ -18,6 +18,14 @@ vi.mock('react-oidc-context', () => ({
   useAuth: useAuthMock,
 }))
 
+// Keeps the sequential fetch mocks below about meetings only.
+vi.mock('../hooks/useUserDirectory', () => ({
+  useUserDirectory: () => ({
+    users: [{ id: 'chair-1', firstName: 'Chair', lastName: 'One', email: 'chair@example.com', enabled: true }],
+    displayName: (id: string) => id,
+  }),
+}))
+
 function mockAuth() {
   useAuthMock.mockReturnValue({ user: { access_token: 'lo-token' } })
 }
@@ -28,7 +36,7 @@ async function fillAndSubmitForm() {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText('Title'), 'Q3 Board Meeting')
   fireEvent.change(screen.getByLabelText('Date and time'), { target: { value: '2099-01-01T09:00' } })
-  await user.type(screen.getByLabelText('Chairperson (user ID)'), 'chair-1')
+  await user.selectOptions(screen.getByLabelText('Chairperson'), 'chair-1')
   await user.click(screen.getByRole('button', { name: 'Save as Draft' }))
   return user
 }

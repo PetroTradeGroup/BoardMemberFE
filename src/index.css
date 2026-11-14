@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Petrotrade brand palette, taken from the logo: forest green (PETRO), lime (the drop),
+ * gold (TRADE), charcoal (tagline). Light is the default -- the logo is designed for white.
+ * The .dark block below is kept brand-coloured for a future toggle. */
+:root {
+  --radius: 0.625rem;
+  --brand-green: #33603a;
+  --brand-lime: #9cc744;
+  --brand-gold: #c9a54a;
+  --brand-charcoal: #333333;
+
+  --background: oklch(0.982 0.004 110);
+  --foreground: oklch(0.24 0.012 140);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.012 140);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.012 140);
+  --primary: oklch(0.44 0.075 148);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0.01 120);
+  --secondary-foreground: oklch(0.3 0.03 145);
+  --muted: oklch(0.955 0.008 120);
+  --muted-foreground: oklch(0.5 0.018 140);
+  --accent: oklch(0.95 0.03 130);
+  --accent-foreground: oklch(0.32 0.06 146);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.915 0.01 120);
+  --input: oklch(0.89 0.012 120);
+  --ring: oklch(0.44 0.075 148);
+  --sidebar: oklch(1 0 0);
+
+  --pending-bg: #fdecc8;
+  --pending-fg: #8a5a00;
+  --pending-border: #e0b24b;
+  --approved-bg: #d8f0e4;
+  --approved-fg: #0f5c3f;
+  --approved-border: #4fae81;
+  --rejected-bg: #fbdcda;
+  --rejected-fg: #9c2b22;
+  --rejected-border: #e07268;
+  --warning-bg: #fce4c0;
+  --warning-fg: #8a4e00;
+  --warning-border: #e0a03d;
+}
+
+.dark {
+  --background: oklch(0.145 0.008 180);
+  --foreground: oklch(0.97 0.006 180);
+  --card: oklch(0.185 0.01 180);
+  --card-foreground: oklch(0.97 0.006 180);
+  --popover: oklch(0.185 0.01 180);
+  --popover-foreground: oklch(0.97 0.006 180);
+  --primary: oklch(0.78 0.15 128);
+  --primary-foreground: oklch(0.2 0.03 140);
+  --secondary: oklch(0.24 0.012 180);
+  --secondary-foreground: oklch(0.97 0.006 180);
+  --muted: oklch(0.24 0.012 180);
+  --muted-foreground: oklch(0.7 0.02 180);
+  --accent: oklch(0.26 0.03 175);
+  --accent-foreground: oklch(0.97 0.006 180);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.78 0.15 128);
+  --sidebar: oklch(0.165 0.009 180);
+
+  --pending-bg: oklch(0.8 0.15 80 / 12%);
+  --pending-fg: oklch(0.85 0.13 85);
+  --pending-border: oklch(0.8 0.15 80 / 35%);
+  --approved-bg: oklch(0.75 0.15 160 / 12%);
+  --approved-fg: oklch(0.82 0.13 160);
+  --approved-border: oklch(0.75 0.15 160 / 35%);
+  --rejected-bg: oklch(0.7 0.19 22 / 12%);
+  --rejected-fg: oklch(0.8 0.13 22);
+  --rejected-border: oklch(0.7 0.19 22 / 35%);
+  --warning-bg: oklch(0.78 0.16 60 / 12%);
+  --warning-fg: oklch(0.84 0.13 65);
+  --warning-border: oklch(0.78 0.16 60 / 35%);
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-brand-green: var(--brand-green);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-gold: var(--brand-gold);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* Legacy design-token names used by the per-screen CSS modules, aliased onto the shadcn
+ * palette above so every existing screen picks up the new theme without a rewrite. */
+:root {
+  --color-background: var(--background);
+  --color-surface: var(--card);
+  --color-border: var(--border);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-pending-bg: var(--pending-bg);
+  --color-pending-text: var(--pending-fg);
+  --color-pending-border: var(--pending-border);
+  --color-approved-bg: var(--approved-bg);
+  --color-approved-text: var(--approved-fg);
+  --color-approved-border: var(--approved-border);
+  --color-rejected-bg: var(--rejected-bg);
+  --color-rejected-text: var(--rejected-fg);
+  --color-rejected-border: var(--rejected-border);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-text: var(--warning-fg);
+  --color-warning-border: var(--warning-border);
+  --font-family-base: var(--font-sans);
+  --font-family-mono: var(--font-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}

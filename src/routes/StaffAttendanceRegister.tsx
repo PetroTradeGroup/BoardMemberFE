@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Link, useParams } from 'react-router-dom'
-import { Card } from '../components/Card/Card'
-import { Button } from '../components/Button/Button'
+import { Button } from '@/components/ui/button'
 import { TextAreaField } from '../components/FormField/TextAreaField'
 import { DraftLabel, StatusBadge } from '../components/StatusBadge/StatusBadge'
 import {
@@ -14,7 +13,11 @@ import {
 } from '../api/attendanceApi'
 import { accessTokenHasRole } from '../auth/accessTokenRoles'
 import { useUserDirectory } from '../hooks/useUserDirectory'
-import styles from './StaffAttendanceRegister.module.css'
+import { ArrowLeft, Calculator, Send } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+import { FormMessage, Page, PageHeader, Section } from '../components/Page/Page'
 
 const STATUS_LABELS: Record<MemberAttendanceStatus, string> = {
   PHYSICAL: 'Physical',
@@ -108,101 +111,138 @@ export function StaffAttendanceRegister() {
   const canSubmit = register && (register.status === 'DRAFT' || register.status === 'REJECTED')
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Attendance Register</h1>
+    <Page>
+      <PageHeader
+        title="Attendance Register"
+        description={register ? register.meetingTitle : undefined}
+        actions={
+          <Button variant="outline" asChild>
+            <Link to="/staff/meetings">
+              <ArrowLeft /> Meetings
+            </Link>
+          </Button>
+        }
+      />
 
-      {loadError ? (
-        <p className={styles.error} role="alert">
-          {loadError}
-        </p>
-      ) : null}
+      {loadError ? <FormMessage error={loadError} /> : null}
 
       {register ? (
-        <Card className={styles.card}>
-          <p className={styles.cardTitle}>{register.meetingTitle}</p>
-          <p className={styles.caption}>{register.committee}</p>
-          {register.status === 'DRAFT' ? <DraftLabel /> : <StatusBadge status={statusToBadge(register.status)} />}
-          {register.rejectionReason ? <p className={styles.rejectionReason}>Reason: {register.rejectionReason}</p> : null}
-
-          <div className={styles.entries}>
-            {register.entries.map((entry) => (
-              <div key={entry.memberUserId} className={styles.entryRow}>
-                <div className={styles.entryHeader}>
-                  <span className={styles.entryMember}>{displayName(entry.memberUserId)}</span>
-                  <span className={styles.entryStatus}>{STATUS_LABELS[entry.status]}</span>
-                </div>
-                {entry.conflictOfInterest ? <p className={styles.coi}>COI: {entry.conflictOfInterest}</p> : null}
-                {entry.apologyReason ? <p className={styles.caption}>Apology: {entry.apologyReason}</p> : null}
-
-                {isLegalOfficer && canSubmit && entry.status === 'NO_RESPONSE' ? (
-                  apologyMemberId === entry.memberUserId ? (
-                    <div className={styles.apologyForm}>
-                      <TextAreaField
-                        label="Apology reason"
-                        value={apologyReason}
-                        onChange={(event) => setApologyReason(event.target.value)}
-                        rows={2}
-                        autoFocus
-                      />
-                      <div className={styles.apologyActions}>
-                        <Button variant="secondary" onClick={() => setApologyMemberId(undefined)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleSaveApology} disabled={isSavingApology || apologyReason.trim() === ''}>
-                          Save apology
-                        </Button>
-                      </div>
-                      {apologyError ? (
-                        <p className={styles.error} role="alert">
-                          {apologyError}
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <Button variant="secondary" onClick={() => openApologyForm(entry.memberUserId)}>
-                      Record apology
-                    </Button>
-                  )
-                ) : null}
-              </div>
-            ))}
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            {register.status === 'DRAFT' ? <DraftLabel /> : <StatusBadge status={statusToBadge(register.status)} />}
+            <span className="text-sm text-muted-foreground">{register.committee}</span>
           </div>
 
-          {isLegalOfficer ? (
-            canSubmit ? (
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                Submit for Approval
-              </Button>
-            ) : (
-              <p className={styles.caption}>
-                {register.status === 'PENDING_APPROVAL' ? 'Awaiting Checker decision.' : 'Register is Approved.'}
-              </p>
-            )
-          ) : null}
-          {submitError ? (
-            <p className={styles.error} role="alert">
-              {submitError}
+          {register.rejectionReason ? (
+            <p className="rounded-md border border-[var(--rejected-border)] bg-[var(--rejected-bg)] px-3 py-2 text-sm text-[var(--rejected-fg)]">
+              Rejected — {register.rejectionReason}
             </p>
           ) : null}
 
-          {/* Story 6.3: EXPERIENCE.md's explicit "never silently hidden" rule -- the action is
-              always visible, with a caption naming the exact blocking condition when disabled. */}
-          {register.status === 'APPROVED' ? (
-            <Link to={`/staff/meetings/${meetingId}/payment-schedule`}>
-              <Button variant="secondary">Generate Payment Schedule</Button>
-            </Link>
-          ) : (
-            <>
-              <Button variant="secondary" disabled>
-                Generate Payment Schedule
+          <Section title="Members" description="Attendance is recorded by each member; apologies are recorded here">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Attendance</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead className="text-right" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {register.entries.map((entry) => (
+                  <TableRow key={entry.memberUserId}>
+                    <TableCell className="font-medium">{displayName(entry.memberUserId)}</TableCell>
+                    <TableCell>
+                      <span className={cn('inline-flex items-center gap-1.5', entry.status === 'NO_RESPONSE' && 'text-muted-foreground')}>
+                        <span className={cn('size-1.5 rounded-full', STATUS_DOTS[entry.status] ?? 'bg-muted-foreground')} aria-hidden />
+                        {STATUS_LABELS[entry.status]}
+                      </span>
+                    </TableCell>
+                    <TableCell className="max-w-xs whitespace-normal text-xs text-muted-foreground">
+                      {entry.conflictOfInterest ? <p className="text-[var(--warning-fg)]">COI: {entry.conflictOfInterest}</p> : null}
+                      {entry.apologyReason ? <p>Apology: {entry.apologyReason}</p> : null}
+                      {!entry.conflictOfInterest && !entry.apologyReason ? '—' : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isLegalOfficer && canSubmit && entry.status === 'NO_RESPONSE' ? (
+                        <Button size="sm" variant="outline" onClick={() => openApologyForm(entry.memberUserId)}>
+                          Record apology
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Section>
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {isLegalOfficer ? (
+              canSubmit ? (
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                  <Send /> Submit for Approval
+                </Button>
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  {register.status === 'PENDING_APPROVAL' ? 'Awaiting Checker decision.' : 'Register is Approved.'}
+                </span>
+              )
+            ) : null}
+
+            {/* Story 6.3: EXPERIENCE.md's explicit "never silently hidden" rule -- the action is
+                always visible, with a caption naming the exact blocking condition when disabled. */}
+            {register.status === 'APPROVED' ? (
+              <Button variant="outline" asChild>
+                <Link to={`/staff/meetings/${meetingId}/payment-schedule`}>
+                  <Calculator /> Generate Payment Schedule
+                </Link>
               </Button>
-              <p className={styles.caption}>Available once this register is approved.</p>
-            </>
-          )}
-        </Card>
+            ) : (
+              <span className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">Available once this register is approved.</span>
+                <Button variant="outline" disabled>
+                  <Calculator /> Generate Payment Schedule
+                </Button>
+              </span>
+            )}
+          </div>
+          <FormMessage error={submitError} />
+        </>
       ) : null}
-    </main>
+
+      <Dialog open={apologyMemberId !== undefined} onOpenChange={(open) => (open ? undefined : setApologyMemberId(undefined))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record apology</DialogTitle>
+            <DialogDescription>{apologyMemberId ? `For ${displayName(apologyMemberId)}. ` : ''}Included in the register and the governance report.</DialogDescription>
+          </DialogHeader>
+          <TextAreaField
+            label="Apology reason"
+            value={apologyReason}
+            onChange={(event) => setApologyReason(event.target.value)}
+            rows={3}
+            autoFocus
+          />
+          <FormMessage error={apologyError} />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setApologyMemberId(undefined)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveApology} disabled={isSavingApology || apologyReason.trim() === ''}>
+              Save apology
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Page>
   )
+}
+
+const STATUS_DOTS: Record<string, string> = {
+  PHYSICAL: 'bg-primary',
+  VIRTUAL: 'bg-brand-gold',
+  APOLOGIZED: 'bg-[var(--pending-fg)]',
 }
 
 function statusToBadge(status: AttendanceRegisterResponse['status']): 'pending' | 'approved' | 'rejected' {

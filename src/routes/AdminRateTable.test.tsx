@@ -44,8 +44,7 @@ describe('AdminRateTable', () => {
 
     render(<AdminRateTable />)
 
-    expect(await screen.findByText(/Chairperson.*Main Board/)).toBeInTheDocument()
-    expect(screen.getByText('350.00')).toBeInTheDocument()
+    expect(await screen.findByRole('row', { name: /Main Board Chairperson 350.00/ })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Finance Committee' })).toBeInTheDocument()
   })
 

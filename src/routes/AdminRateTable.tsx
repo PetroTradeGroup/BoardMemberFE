@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { Card } from '../components/Card/Card'
 import { Button } from '../components/Button/Button'
 import { FormField } from '../components/FormField/FormField'
 import { SelectField, type SelectFieldOption } from '../components/FormField/SelectField'
@@ -8,7 +7,9 @@ import { usePagination } from '../components/Pagination/usePagination'
 import { PaginationControls } from '../components/Pagination/PaginationControls'
 import { listCommittees, type CommitteeSummary } from '../api/committeesApi'
 import { ApiError, listCurrentRates, proposeRateChange, type Position, type RateTableEntryView } from '../api/paymentsApi'
-import styles from './AdminRateTable.module.css'
+import { Send } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { FormMessage, Page, PageHeader, Section } from '../components/Page/Page'
 
 const POSITION_OPTIONS: SelectFieldOption[] = [
   { value: 'CHAIRPERSON', label: 'Chairperson' },
@@ -108,65 +109,70 @@ export function AdminRateTable() {
   const ratePagination = usePagination(rates ?? [], 10)
 
   return (
-    <main className={styles.page}>
-      <Card className={styles.card}>
-        <h1 className={styles.heading}>Rate Table</h1>
-        {loadError ? (
-          <p className={styles.error} role="alert">
-            {loadError}
-          </p>
-        ) : null}
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <SelectField
-            label="Committee"
-            value={committeeId}
-            onChange={(event) => setCommitteeId(event.target.value)}
-            options={committeeOptions}
-            error={fieldErrors.committeeId}
-          />
-          <SelectField
-            label="Position"
-            value={position}
-            onChange={(event) => setPosition(event.target.value as Position)}
-            options={POSITION_OPTIONS}
-            error={fieldErrors.position}
-          />
-          <FormField
-            label="Rate"
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={rate}
-            onChange={(event) => setRate(event.target.value)}
-            error={fieldErrors.rate}
-            required
-          />
-          <Button type="submit" disabled={isSubmitting || !committeeId || !rate}>
-            Propose rate
-          </Button>
-          {formError ? (
-            <p className={styles.error} role="alert">
-              {formError}
-            </p>
-          ) : null}
-          {successMessage ? <p className={styles.success}>{successMessage}</p> : null}
-        </form>
-      </Card>
+    <Page>
+      <PageHeader title="Rate Table" description="Sitting-fee rates used to generate payment schedules. Every change is approved by the Checker before it takes effect." />
+      {loadError ? <FormMessage error={loadError} /> : null}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
+        <Section title="Propose a rate">
+          <form className="flex flex-col gap-4 p-5" onSubmit={handleSubmit}>
+            <SelectField
+              label="Committee"
+              value={committeeId}
+              onChange={(event) => setCommitteeId(event.target.value)}
+              options={committeeOptions}
+              error={fieldErrors.committeeId}
+            />
+            <SelectField
+              label="Position"
+              value={position}
+              onChange={(event) => setPosition(event.target.value as Position)}
+              options={POSITION_OPTIONS}
+              error={fieldErrors.position}
+            />
+            <FormField
+              label="Rate"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
+              error={fieldErrors.rate}
+              required
+            />
+            <Button type="submit" disabled={isSubmitting || !committeeId || !rate}>
+              <Send /> Propose rate
+            </Button>
+            <FormMessage error={formError} success={successMessage} />
+          </form>
+        </Section>
 
-      <Card className={styles.card}>
-        <h1 className={styles.heading}>Current Rates</h1>
-        <ul className={styles.list}>
-          {ratePagination.pageItems.map((entry) => (
-            <li key={entry.id} className={styles.listItem}>
-              <span>
-                {POSITION_LABELS[entry.position]} &middot; {entry.committeeName}
-              </span>
-              <span className={styles.rateValue}>{entry.rate.toFixed(2)}</span>
-            </li>
-          ))}
-        </ul>
-        <PaginationControls {...ratePagination} />
-      </Card>
-    </main>
+        <Section title="Current Rates" description="Approved rates only">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Committee</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead className="text-right">Rate</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ratePagination.pageItems.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="font-medium">{entry.committeeName}</TableCell>
+                  <TableCell>{POSITION_LABELS[entry.position]}</TableCell>
+                  <TableCell className="text-right font-mono">{entry.rate.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+              {rates && rates.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No approved rates yet.</TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+          <PaginationControls {...ratePagination} />
+        </Section>
+      </div>
+    </Page>
   )
 }

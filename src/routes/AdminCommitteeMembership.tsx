@@ -5,7 +5,8 @@ import { Button } from '../components/Button/Button'
 import { SelectField, type SelectFieldOption } from '../components/FormField/SelectField'
 import { ApiError, listCommittees, proposeMembershipChange, type CommitteeSummary, type MembershipAction } from '../api/committeesApi'
 import { listUsers, type UserSummary } from '../api/usersApi'
-import styles from './AdminCommitteeMembership.module.css'
+import { Info, Send } from 'lucide-react'
+import { FormMessage, Page, PageHeader, Section } from '../components/Page/Page'
 
 const ACTION_OPTIONS: SelectFieldOption[] = [
   { value: 'ASSIGN', label: 'Assign to committee' },
@@ -98,46 +99,48 @@ export function AdminCommitteeMembership() {
   }))
 
   return (
-    <main className={styles.page}>
-      <Card className={styles.card}>
-        <h1 className={styles.heading}>Committee Membership</h1>
-        {loadError ? (
-          <p className={styles.error} role="alert">
-            {loadError}
-          </p>
-        ) : null}
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <SelectField
-            label="Committee"
-            value={committeeId}
-            onChange={(event) => setCommitteeId(event.target.value)}
-            options={committeeOptions}
-            error={fieldErrors.committeeId}
-          />
-          <SelectField
-            label="Member"
-            value={memberUserId}
-            onChange={(event) => setMemberUserId(event.target.value)}
-            options={memberOptions}
-            error={fieldErrors.memberUserId}
-          />
-          <SelectField
-            label="Action"
-            value={action}
-            onChange={(event) => setAction(event.target.value as MembershipAction)}
-            options={ACTION_OPTIONS}
-          />
-          <Button type="submit" disabled={isSubmitting || !committeeId || !memberUserId}>
-            Propose change
-          </Button>
-          {formError ? (
-            <p className={styles.error} role="alert">
-              {formError}
-            </p>
-          ) : null}
-          {successMessage ? <p className={styles.success}>{successMessage}</p> : null}
-        </form>
-      </Card>
-    </main>
+    <Page>
+      <PageHeader title="Committee Membership" description="Assign members to, or remove them from, the Main Board and its committees." />
+      {loadError ? <FormMessage error={loadError} /> : null}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
+        <Section title="Propose a membership change">
+          <form className="flex flex-col gap-4 p-5" onSubmit={handleSubmit}>
+            <SelectField
+              label="Committee"
+              value={committeeId}
+              onChange={(event) => setCommitteeId(event.target.value)}
+              options={committeeOptions}
+              error={fieldErrors.committeeId}
+            />
+            <SelectField
+              label="Member"
+              value={memberUserId}
+              onChange={(event) => setMemberUserId(event.target.value)}
+              options={memberOptions}
+              error={fieldErrors.memberUserId}
+            />
+            <SelectField
+              label="Action"
+              value={action}
+              onChange={(event) => setAction(event.target.value as MembershipAction)}
+              options={ACTION_OPTIONS}
+            />
+            <Button type="submit" disabled={isSubmitting || !committeeId || !memberUserId}>
+              <Send /> Propose change
+            </Button>
+            <FormMessage error={formError} success={successMessage} />
+          </form>
+        </Section>
+
+        <Card className="p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold"><Info className="size-4 text-primary" /> How membership changes work</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>You propose an assignment or removal here.</li>
+            <li>The Checker reviews it in Pending Approvals.</li>
+            <li>Once approved, the member immediately sees (or stops seeing) that committee&apos;s approved meetings.</li>
+          </ol>
+        </Card>
+      </div>
+    </Page>
   )
 }

@@ -1,5 +1,6 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { Pagination } from './usePagination'
-import styles from './PaginationControls.module.css'
 
 /** Renders nothing when everything fits on one page -- a lone "Page 1 of 1" bar under a
  * 3-item list is noise, not a control. */
@@ -9,16 +10,16 @@ export function PaginationControls({ page, pageCount, totalItems, goToPage }: Pa
   }
 
   return (
-    <div className={styles.controls}>
-      <button type="button" className={styles.button} onClick={() => goToPage(page - 1)} disabled={page <= 1}>
-        Previous
-      </button>
-      <span className={styles.status}>
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 1}>
+        <ChevronLeft /> Previous
+      </Button>
+      <span className="font-mono text-xs text-muted-foreground">
         Page {page} of {pageCount} · {totalItems} total
       </span>
-      <button type="button" className={styles.button} onClick={() => goToPage(page + 1)} disabled={page >= pageCount}>
-        Next
-      </button>
+      <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page >= pageCount}>
+        Next <ChevronRight />
+      </Button>
     </div>
   )
 }

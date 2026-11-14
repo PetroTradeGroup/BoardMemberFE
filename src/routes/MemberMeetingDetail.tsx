@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { useLocation, useParams } from 'react-router-dom'
-import { Card } from '../components/Card/Card'
-import { Button } from '../components/Button/Button'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { TextAreaField } from '../components/FormField/TextAreaField'
 import { declareConflictOfInterest, getMyAttendance, recordAttendance, type AttendanceType } from '../api/attendanceApi'
-import type { MeetingResponse } from '../api/meetingsApi'
-import styles from './MemberMeetingDetail.module.css'
+import { listMeetings, type MeetingResponse } from '../api/meetingsApi'
+import { ArrowLeft, Lock, MapPin, ShieldCheck, Video } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { FormMessage, Page, PageHeader, Section } from '../components/Page/Page'
 
 /**
  * Story 5.2/5.3: attendance type selector (Physical/Virtual, read-only with an explanatory
@@ -18,10 +19,25 @@ import styles from './MemberMeetingDetail.module.css'
 export function MemberMeetingDetail() {
   const { id: meetingId } = useParams<{ id: string }>()
   const location = useLocation()
-  const meeting = (location.state as { meeting?: MeetingResponse } | null)?.meeting
+  const stateMeeting = (location.state as { meeting?: MeetingResponse } | null)?.meeting
+  const [fetchedMeeting, setFetchedMeeting] = useState<MeetingResponse>()
+  const meeting = stateMeeting ?? fetchedMeeting
 
   const auth = useAuth()
   const accessToken = auth.user?.access_token
+
+  // Direct link / page refresh: no router state, so find the meeting in the Member's own
+  // (already committee-filtered) list -- the single-meeting endpoint is staff-only.
+  useEffect(() => {
+    if (stateMeeting || !accessToken || !meetingId) {
+      return
+    }
+    listMeetings(accessToken)
+      .then((response) => setFetchedMeeting(response.items.find((item) => item.id === meetingId)))
+      .catch(() => {
+        // Non-fatal: the attendance/COI controls still work without the summary header.
+      })
+  }, [stateMeeting, accessToken, meetingId])
 
   const [attendanceType, setAttendanceType] = useState<AttendanceType>()
   const [loadError, setLoadError] = useState<string>()
@@ -33,9 +49,10 @@ export function MemberMeetingDetail() {
   const [coiError, setCoiError] = useState<string>()
   const [isSavingCoi, setIsSavingCoi] = useState(false)
 
-  // Computed once via a lazy initializer, not inline during render (an impure Date.now() call) --
-  // a reload naturally recomputes it, and this screen doesn't need to flip live mid-session.
-  const [meetingHasStarted] = useState(() => (meeting ? new Date(meeting.scheduledAt).getTime() <= Date.now() : false))
+  // "Now" captured once via a lazy initializer (not an impure Date.now() during render); the
+  // comparison is derived so it also works when the meeting summary arrives after mount.
+  const [now] = useState(() => Date.now())
+  const meetingHasStarted = meeting ? new Date(meeting.scheduledAt).getTime() <= now : false
 
   useEffect(() => {
     if (!accessToken || !meetingId) {
@@ -91,72 +108,77 @@ export function MemberMeetingDetail() {
   }
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.pageTitle}>{meeting?.title ?? 'Meeting'}</h1>
-      {meeting ? (
-        <p className={styles.meta}>
-          {meeting.committee} &middot; {new Date(meeting.scheduledAt).toLocaleString()}
-        </p>
-      ) : null}
+    <Page>
+      <PageHeader
+        title={meeting?.title ?? 'Meeting'}
+        description={meeting ? `${meeting.committee} · ${new Date(meeting.scheduledAt).toLocaleString()}` : undefined}
+        actions={
+          <Button variant="outline" asChild>
+            <Link to="/member/meetings">
+              <ArrowLeft /> Meetings
+            </Link>
+          </Button>
+        }
+      />
 
-      {loadError ? (
-        <p className={styles.error} role="alert">
-          {loadError}
-        </p>
-      ) : null}
+      {loadError ? <FormMessage error={loadError} /> : null}
 
-      <Card className={styles.card}>
-        <p className={styles.cardTitle}>Attendance</p>
-        {meetingHasStarted ? (
-          <p className={styles.caption}>Attendance closed — meeting has started.</p>
-        ) : (
-          <div className={styles.attendanceOptions}>
-            <Button
-              variant={attendanceType === 'PHYSICAL' ? 'primary' : 'secondary'}
-              onClick={() => handleSelectAttendance('PHYSICAL')}
-              disabled={isSavingAttendance}
-            >
-              Physical
-            </Button>
-            <Button
-              variant={attendanceType === 'VIRTUAL' ? 'primary' : 'secondary'}
-              onClick={() => handleSelectAttendance('VIRTUAL')}
-              disabled={isSavingAttendance}
-            >
-              Virtual
-            </Button>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <Section title="Attendance" description="How you will attend. You can change this until the meeting starts.">
+          <div className="space-y-3 p-5">
+            {meetingHasStarted ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Lock className="size-4" /> Attendance closed — meeting has started.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {(['PHYSICAL', 'VIRTUAL'] as const).map((type) => {
+                  const selected = attendanceType === type
+                  const Icon = type === 'PHYSICAL' ? MapPin : Video
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleSelectAttendance(type)}
+                      disabled={isSavingAttendance}
+                      aria-pressed={selected}
+                      className={cn(
+                        'flex flex-col items-center gap-2 rounded-lg border p-4 text-sm font-medium transition-colors disabled:opacity-50',
+                        selected ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' : 'hover:bg-accent',
+                      )}
+                    >
+                      <Icon className="size-5" aria-hidden />
+                      {type === 'PHYSICAL' ? 'Physical' : 'Virtual'}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {attendanceType && !meetingHasStarted ? (
+              <p className="text-sm text-muted-foreground">Currently set to {attendanceType.toLowerCase()}.</p>
+            ) : null}
+            <FormMessage error={attendanceError} />
           </div>
-        )}
-        {attendanceType && !meetingHasStarted ? <p className={styles.caption}>Currently set to {attendanceType.toLowerCase()}.</p> : null}
-        {attendanceError ? (
-          <p className={styles.error} role="alert">
-            {attendanceError}
-          </p>
-        ) : null}
-      </Card>
+        </Section>
 
-      <Card className={styles.card}>
-        <p className={styles.cardTitle}>Conflict of Interest</p>
-        <p className={styles.caption}>Visible only to you, the Legal Officer, and the Checker.</p>
-        <TextAreaField
-          label="Declaration"
-          value={declaration}
-          onChange={(event) => {
-            setDeclaration(event.target.value)
-            setCoiSuccess(false)
-          }}
-          rows={4}
-        />
-        <Button onClick={handleSaveCoi} disabled={isSavingCoi || declaration.trim() === ''}>
-          Save declaration
-        </Button>
-        {coiSuccess ? <p className={styles.success}>Declaration saved.</p> : null}
-        {coiError ? (
-          <p className={styles.error} role="alert">
-            {coiError}
-          </p>
-        ) : null}
-      </Card>
-    </main>
+        <Section title="Conflict of Interest" description="Visible only to you, the Legal Officer, and the Checker.">
+          <div className="space-y-4 p-5">
+            <TextAreaField
+              label="Declaration"
+              value={declaration}
+              onChange={(event) => {
+                setDeclaration(event.target.value)
+                setCoiSuccess(false)
+              }}
+              rows={4}
+            />
+            <Button onClick={handleSaveCoi} disabled={isSavingCoi || declaration.trim() === ''}>
+              <ShieldCheck /> Save declaration
+            </Button>
+            <FormMessage error={coiError} success={coiSuccess ? 'Declaration saved.' : undefined} />
+          </div>
+        </Section>
+      </div>
+    </Page>
   )
 }

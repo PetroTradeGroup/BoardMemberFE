@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from 'react-oidc-context'
 import { missingEnvVars, oidcConfig } from './auth/oidcConfig'
-import './styles/tokens.css'
+import './index.css'
 import App from './App.tsx'
 
 // Strips `?code=&state=` (and restores the pre-redirect path) once the code

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { Home } from './Home'
 
@@ -54,9 +54,11 @@ describe('Home', () => {
 
     render(<Home />)
 
-    expect(await screen.findByText('5')).toBeInTheDocument() // Meetings stat
-    expect(screen.getByText('1')).toBeInTheDocument() // Pending Approvals stat
-    expect(screen.getByText('2')).toBeInTheDocument() // Approved Records stat
+    // Chart legends also print counts, so read each value from inside its own stat card.
+    const statValue = (label: string) => screen.getByText(label).closest('.rounded-xl')?.querySelector('.font-mono')?.textContent
+    await waitFor(() => expect(statValue('Meetings')).toBe('5'))
+    expect(statValue('Pending Approvals')).toBe('1')
+    expect(statValue('Approved Records')).toBe('2')
     expect(screen.getByText('Physical vs virtual attendance')).toBeInTheDocument()
   })
 

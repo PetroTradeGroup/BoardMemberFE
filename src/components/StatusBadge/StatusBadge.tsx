@@ -1,4 +1,5 @@
-import styles from './StatusBadge.module.css'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export type BadgeStatus = 'pending' | 'approved' | 'rejected' | 'warning'
 
@@ -9,27 +10,31 @@ const LABELS: Record<BadgeStatus, string> = {
   warning: 'Warning',
 }
 
-/**
- * `components.status-badge-{pending,approved,rejected,warning}` from
- * DESIGN.md — reserved exclusively for Maker-Checker lifecycle state
- * (Do/Don't table: "Same status-badge vocabulary across all six
- * Maker-Checker record types" / never repurposed for other UI emphasis).
- */
-export function StatusBadge({ status }: { status: BadgeStatus }) {
-  return (
-    <span className={`${styles.badge} ${styles[status]}`}>
-      <span className={styles.dot} />
-      {LABELS[status]}
-    </span>
-  )
+const TONES: Record<BadgeStatus, string> = {
+  pending: 'bg-[var(--pending-bg)] text-[var(--pending-fg)] border-[var(--pending-border)]',
+  approved: 'bg-[var(--approved-bg)] text-[var(--approved-fg)] border-[var(--approved-border)]',
+  rejected: 'bg-[var(--rejected-bg)] text-[var(--rejected-fg)] border-[var(--rejected-border)]',
+  warning: 'bg-[var(--warning-bg)] text-[var(--warning-fg)] border-[var(--warning-border)]',
 }
 
 /**
- * Draft is deliberately NOT one of the four badge colors (EXPERIENCE.md
- * State Patterns: "Draft ... neutral treatment — no status badge from the
- * four-color vocabulary, draft is pre-workflow, not a Maker-Checker
- * state"). A plain uppercase text label instead.
+ * Maker-Checker lifecycle badge -- reserved exclusively for record status, the same four-tone
+ * vocabulary across all six record types (DESIGN.md), never repurposed for other emphasis.
  */
+export function StatusBadge({ status }: { status: BadgeStatus }) {
+  return (
+    <Badge variant="outline" className={cn('w-fit gap-1.5 rounded-full px-2.5', TONES[status])}>
+      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+      {LABELS[status]}
+    </Badge>
+  )
+}
+
+/** Draft is pre-workflow, not a Maker-Checker state -- neutral, not one of the four tones. */
 export function DraftLabel() {
-  return <span className={styles.draftLabel}>Draft</span>
+  return (
+    <Badge variant="secondary" className="w-fit rounded-full px-2.5 text-muted-foreground">
+      Draft
+    </Badge>
+  )
 }

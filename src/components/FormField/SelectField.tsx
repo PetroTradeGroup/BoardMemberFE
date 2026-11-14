@@ -1,6 +1,8 @@
 import type { SelectHTMLAttributes } from 'react'
 import { useId } from 'react'
-import styles from './FormField.module.css'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Field } from './FormField'
 
 export interface SelectFieldOption {
   value: string
@@ -14,43 +16,36 @@ export interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement
 }
 
 /**
- * A `<select>` sharing FormField's exact classes (label/rest/focus/error
- * border states) rather than a new component with its own styling — UX-DR6
- * requires reusing the existing Form-field visual pattern, which is defined
- * per-element-type upstream (input vs. select can't share one DOM tag), not
- * per-component.
+ * Native `<select>` styled to match shadcn's Input. Kept native (not Radix Select) on purpose:
+ * full keyboard/screen-reader/mobile picker support for free, and works with plain form tests.
  */
 export function SelectField({ label, options, error, id, className, ...rest }: SelectFieldProps) {
   const generatedId = useId()
   const selectId = id ?? generatedId
-  const errorId = `${selectId}-error`
-  const selectClassName = [styles.input, error ? styles.inputError : '', className]
-    .filter(Boolean)
-    .join(' ')
-
   return (
-    <div className={styles.field}>
-      <label htmlFor={selectId} className={styles.label}>
-        {label}
-      </label>
-      <select
-        id={selectId}
-        className={selectClassName}
-        {...rest}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error ? (
-        <span id={errorId} className={styles.errorText} role="alert">
-          {error}
-        </span>
-      ) : null}
-    </div>
+    <Field label={label} htmlFor={selectId} error={error}>
+      <div className="relative">
+        <select
+          id={selectId}
+          className={cn(
+            'h-10 w-full appearance-none rounded-md border border-input bg-transparent pl-3 pr-9 text-sm shadow-xs outline-none transition-[color,box-shadow] dark:bg-input/30',
+            'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+            'aria-invalid:border-destructive aria-invalid:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50',
+            '[&>option]:bg-popover [&>option]:text-popover-foreground',
+            className,
+          )}
+          {...rest}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${selectId}-error` : undefined}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      </div>
+    </Field>
   )
 }

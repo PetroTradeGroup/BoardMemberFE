@@ -1,39 +1,38 @@
-import type { InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useId } from 'react'
-import styles from './FormField.module.css'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
 }
 
-/**
- * `components.form-field` from DESIGN.md: labelled input with rest/focus/
- * error border states. The `rejected` status trio is reused for the error
- * state per DESIGN.md's Form field assumption.
- */
+/** Labelled shadcn Input with an inline, announced error message. */
 export function FormField({ label, error, id, className, ...rest }: FormFieldProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId
-  const errorId = `${inputId}-error`
-  const inputClassName = [styles.input, error ? styles.inputError : '', className]
-    .filter(Boolean)
-    .join(' ')
-
   return (
-    <div className={styles.field}>
-      <label htmlFor={inputId} className={styles.label}>
-        {label}
-      </label>
-      <input
+    <Field label={label} htmlFor={inputId} error={error}>
+      <Input
         id={inputId}
-        className={inputClassName}
+        className={className ? `h-10 ${className}` : 'h-10'}
         {...rest}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={error ? `${inputId}-error` : undefined}
       />
+    </Field>
+  )
+}
+
+/** Shared label + control + error layout for FormField / SelectField / TextAreaField. */
+export function Field({ label, htmlFor, error, children }: { label: string; htmlFor: string; error?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
       {error ? (
-        <span id={errorId} className={styles.errorText} role="alert">
+        <span id={`${htmlFor}-error`} className="text-xs text-destructive" role="alert">
           {error}
         </span>
       ) : null}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -30,15 +30,26 @@ describe('SignIn', () => {
     expect(signinRedirect).toHaveBeenCalledWith(undefined)
   })
 
-  it('passes the originally-requested path through as signinRedirect state', async () => {
+  it('silently restores the session (prompt=none) when bounced here from a protected page', async () => {
     const signinRedirect = vi.fn().mockResolvedValue(undefined)
+    useAuthMock.mockReturnValue({ signinRedirect })
+
+    renderSignIn({ pathname: '/', state: { from: '/staff/meetings' } })
+
+    expect(signinRedirect).toHaveBeenCalledWith({ state: '/staff/meetings', prompt: 'none' })
+  })
+
+  it('passes the originally-requested path through as signinRedirect state on a manual sign-in', async () => {
+    // Silent attempt fails (e.g. Keycloak unreachable) -> button re-enabled for a manual try.
+    const signinRedirect = vi.fn().mockRejectedValueOnce(new Error('x')).mockResolvedValue(undefined)
     useAuthMock.mockReturnValue({ signinRedirect })
     const user = userEvent.setup()
 
     renderSignIn({ pathname: '/', state: { from: '/staff/meetings' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    expect(signinRedirect).toHaveBeenCalledWith({ state: '/staff/meetings' })
+    expect(signinRedirect).toHaveBeenLastCalledWith({ state: '/staff/meetings' })
   })
 
   it('shows a friendly inline error and re-enables the button if signinRedirect rejects', async () => {
